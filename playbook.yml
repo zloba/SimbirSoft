@@ -1,0 +1,38 @@
+# Ansible playbook for deploying a Flaskex app
+---
+# Install system apt packages
+- hosts: all
+  vars:
+    app_path: /opt/flaskex
+    app_requirements: "{{ app_path }}/requirements.txt"
+
+  become: true
+
+  tasks:
+
+  - name: Install pip
+    apt:
+      name: ['python3-pip']
+      state: present
+      update_cache: yes
+
+  - name: Clone repo
+    git:
+      repo: 'https://github.com/anfederico/Flaskex.git'
+      dest: "{{ app_path }}"
+      update: yes
+      force: yes
+
+  - name: Install requirements
+    pip:
+      requirements: "{{ app_requirements }}"
+
+  - name: Fix not supported required() method on WTForms
+    ansible.builtin.replace:
+      path: "{{ app_path }}/scripts/forms.py"
+      regexp: 'required'
+      replace: 'InputRequired'
+    
+  - name: run flaskex
+    shell: |
+      nohup python3 "{{ app_path }}/app.py" >  "{{ app_path }}/log.txt" 2>&1 &
